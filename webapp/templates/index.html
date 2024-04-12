@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNT Webapp</title>
+    <script src="../mpld3-master/mpld3/js/mpld3.v0.5.10.min.js"></script>
+    <style>           /* TO BE MOVE TO CSS */
+        .plot-element { 
+            width: 800px; 
+            height: 600px; 
+            border: 4px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h1>SNT - Spectra Normalization Tool</h1>
+    <form id = "get_parameters" action="/get_parameters" method="POST">
+        radius_min= <input type = "number"  name="radius_min"/>
+        radius_max= <input type = "number"  name="radius_max"/>
+        max_vicinity = <input type = "number"  name="max_vicinity"/>
+        stretching = <input type = "number"  name="stretching"/>
+        <button type="submit">calculate</button>
+    </form>
+
+{% if plot %}
+    <div class="plot-element">{{ plot|safe }}</div>
+ 
+{% endif %}
+</body>
+</html>

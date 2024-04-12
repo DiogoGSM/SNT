@@ -1,0 +1,45 @@
+language: python
+
+python:
+  - 2.7
+  - 3.4
+  - 3.5
+
+env:
+  - DEPS="numpy=1.11 matplotlib=2.2.3 jinja2=2.8 pandas=0.18 nose2"
+
+install:
+  - conda create -n testenv --yes python=$TRAVIS_PYTHON_VERSION
+  - source activate testenv
+  - conda install --yes $DEPS
+  - pip install -r requirements.txt
+  - python setup.py install
+
+before_install:
+  # install npm packages first, to use system python
+  - npm config set python python2.7
+  - npm install d3 vows smash jsdom request
+  - npm i
+  # then install python version to test
+  - sudo apt-get update
+  # We do this conditionally because it saves us some downloading if the
+  # version is the same.
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+    else
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+  # start Virtual X, so default matplotlib backend works
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+
+script:
+  - MPLBE=Agg HIDE_PLOTS=True nose2 mpld3
+  - make test  # Javascript tests
