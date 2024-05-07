@@ -8,16 +8,16 @@ from proj_functions import *
 import scipy.constants as constant
 import sys
 import config
-from pandas import *
+#from pandas import *
  
 
-def cont_determ (remove_n_first, radius_min, radius_max, max_vicinity, \
+def cont_determ (wv, sp, remove_n_first, radius_min, radius_max, max_vicinity, \
                 stretching, use_RIC, interp, use_denoise, usefilter, nu, niter_peaks_remove, denoising_distance): 
-    data = read_csv("./spectra/case_2_spec.csv")
+    #data = read_csv("./spectra/case_2_spec.csv")
  
     # converting column data to list
-    wavelengths = data['wave'].tolist()
-    spectra = data['flux'].tolist()
+    wavelengths = wv
+    spectra = sp
 
 #inputfile=sys.argv[1]
 
