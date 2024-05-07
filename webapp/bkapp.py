@@ -10,12 +10,12 @@ import base64
 import io
 import pandas as pd
 from snt_web import *
-
+import os
 
 remove_n_first=0      #removes the first n points in the spectra (only if first points are not useful!) otherwise set to 0
-radius_min=1             #min alpha shape radius
-radius_max=2            #max alpha shape radius (should be at least the size of the largest gap)
-max_vicinity = 1       #required number of values between adjacent maxima
+radius_min=10             #min alpha shape radius
+radius_max=20            #max alpha shape radius (should be at least the size of the largest gap)
+max_vicinity = 100       #required number of values between adjacent maxima
 stretching = 10      #normalization parameter
 use_RIC = True  #use RIC to avoid large "dips" in the continuum (see documentation)
 interp="linear"     #interpolation type
@@ -60,13 +60,15 @@ def upload_plot_data(attr, old, new):
     anchors_data_source.data= {'x' : [], 'y': []}   #reset sources on new upload
     local_max_source.data= {'x' : [], 'y': []}
     cont_data_source.data = {'x': [], 'y': []}
+    print("in upload callback")
     decoded = base64.b64decode(new)
     data = io.BytesIO(decoded)
     df = pd.read_csv(data)
+    #print(df.shape)
     if(df.shape[1]==3):                    #if it includes indexes in the csv drop them
         df.drop(columns=df.columns[0], axis=1, inplace=True)      
     x = df.iloc[:, 0]
-    y = df.iloc[:, 1]   
+    y = df.iloc[:, 1]     
     source.data= {'x': x, 'y': y}
 
 file_input = FileInput(accept=".csv", width=300, height=50)
