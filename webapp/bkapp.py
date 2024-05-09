@@ -3,9 +3,11 @@ import numpy as np
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, Slider, TextInput, ColumnDataSource, \
-                         TapTool, CustomJS, Button, Div, CustomJS, NumericInput, CheckboxGroup
+                         TapTool, CustomJS, Button, Div, CustomJS, NumericInput, CheckboxGroup, \
+                         RadioButtonGroup
 from bokeh.plotting import figure
 from bokeh.models.widgets import FileInput
+from bokeh.events import ButtonClick
 import base64
 import io
 import pandas as pd
@@ -13,10 +15,12 @@ from snt_web import *
 from os.path import dirname, join
 from pathlib import Path
 
+from bisect import bisect_left
+
 remove_n_first=0      #removes the first n points in the spectra (only if first points are not useful!) otherwise set to 0
 radius_min=20             #min alpha shape radius
 radius_max=40            #max alpha shape radius (should be at least the size of the largest gap)
-max_vicinity = 10       #required number of values between adjacent maxima
+max_vicinity = 1       #required number of values between adjacent maxima
 stretching = 10      #normalization parameter
 use_RIC = False  #use RIC to avoid large "dips" in the continuum (see documentation)
 interp="linear"     #interpolation type
@@ -47,11 +51,17 @@ p.yaxis.major_label_text_font_size = '11pt'
 
 local_max_data = {'x' : [], 'y': []}
 local_max_source = ColumnDataSource(data=local_max_data)
-p.scatter('x', 'y',source=local_max_source ,fill_color = 'yellow', size=6)
+p.scatter('x', 'y',source=local_max_source ,fill_color = 'yellow', size=7, \
+            selection_color="yellow",
+            selection_line_color="firebrick",
+            nonselection_fill_alpha=1,
+            nonselection_fill_color="yellow",
+            nonselection_line_color="yellow",
+            nonselection_line_alpha=1.0)
 
 anchors_data = {'x' : [], 'y': []}
 anchors_data_source = ColumnDataSource(data=anchors_data)
-p.scatter('x', 'y',source=anchors_data_source,fill_color = 'red', size=6)
+p.scatter('x', 'y',source=anchors_data_source,fill_color = 'red', size=7)
 
 cont_data = {'x': [], 'y': []}
 cont_data_source = ColumnDataSource(data=cont_data)
@@ -84,8 +94,6 @@ def calc_func():
     anchors_data_source.data= {'x': anchors_x, 'y': anchors_y}
     cont_data_source.data = {'x': wavelengths, 'y': y_inter}
 
-def export_line():
-    pass
 
 def export_anchors():
     pass
@@ -105,7 +113,7 @@ export_button.js_on_event(
 
 
 export_anchors_button= Button(label="Export Anchors", button_type="primary", width=150)
-export_anchors_button.on_click(export_line)
+export_anchors_button.on_click(export_anchors)
 
 def update_radius(attr, old, new):
    global radius_min 
@@ -115,11 +123,11 @@ def update_radius_max(attr, old, new):
     global radius_max
     radius_max= new
 
-radius_input = NumericInput(low=1, title="Radius Min", mode='float',styles={'font-weight': 'bold', 'font-size': '16px'} ,description="α-shape starting radius")
+radius_input = NumericInput(low=0.01, title="Radius Min", mode='float',styles={'font-weight': 'bold', 'font-size': '16px'} ,description="α-shape starting radius")
 radius_input.on_change("value", update_radius)
 
 
-radius_max_input= NumericInput(low=1, title="Radius Max",mode='float',styles={'font-weight': 'bold', 'font-size': '16px'}, description="α-shape maximum radius" )
+radius_max_input= NumericInput(low=0.5, title="Radius Max",mode='float',styles={'font-weight': 'bold', 'font-size': '16px'}, description="α-shape maximum radius" )
 radius_max_input.on_change("value", update_radius_max)
 
 def change_options(attr, old, new):
@@ -153,23 +161,44 @@ def update_stretching(attr, old, new):
 stretching_input= NumericInput(low=0, mode='float',title="Stretching",styles={'font-weight': 'bold', 'font-size': '16px'}, description="Vertical axis scaling" )
 stretching_input.on_change("value", update_stretching)
 
+taptool = p.select(type=TapTool)
+#local_max_source.selected.on_change('indices', callbackprint)
 
-#source = ColumnDataSource(data=dict(x=[1, 2, 3, 4, 5], y=[2, 5, 8, 2, 7]))
+def update_anchors():
+    selectedIndex = local_max_source.selected.indices
+    for i  in range (0 ,len(selectedIndex)):
+     #   print("Index:", selectedIndex[i])
+     #   print("x:", local_max_source.data['x'][selectedIndex[i]])
+     #   print("y:", local_max_source.data['y'][selectedIndex[i]])
+       # anchors_data_source.data['x'].append(local_max_source.data['x'][selectedIndex[i]])    
+       # anchors_data_source.data['y'].append(local_max_source.data['y'][selectedIndex[i]])         
+        idx = bisect_left(anchors_data_source.data['x'], local_max_source.data['x'][selectedIndex[i]]) #ordered insertion in anchors list (needed for cubic interp)
+        if(anchors_data_source.data['x'][idx]==local_max_source.data['x'][selectedIndex[i]]):     #avoid duplicate insertions
+            continue
+        anchors_data_source.data['x'].insert(idx, local_max_source.data['x'][selectedIndex[i]])
+        anchors_data_source.data['y'].insert(idx, local_max_source.data['y'][selectedIndex[i]])                                                                                      
+    #print("-------------------------------------")   
+   # print(anchors_data_source.data['y'])
+    new_fx=continuum.interpolate(anchors_data_source.data['x'],anchors_data_source.data['y'], interp) #interpolate with new points
+    cont_data_source.data['y']=new_fx(cont_data_source.data['x'])                                     
 
-#p.scatter(x='x', y='y', size=20, source=source)
 
+add_maxima_button = Button(label="Add Maxima", button_type="default", width=150)
+add_maxima_button.on_event(ButtonClick,update_anchors)
 
-#def callbackprint(attrname, old, new):
-#    selectedIndex = source.selected.indices
-#    for i  in range (0 ,len(selectedIndex)):
-#        print("Index:", selectedIndex[i])
-#        print("x:", source.data['x'][selectedIndex[i]])
-#        print("y:", source.data['y'][selectedIndex[i]])
-#    print("-------------------------------------")
-#taptool = p.select(type=TapTool)
-#source.selected.on_change('indices', callbackprint)
+def change_options2(attr, old, new):
+    global interp
+    if new == 0:
+        interp="linear"
+    else:
+        interp="cubic"    
+  
+interp_button_title = Div(text="Interpolation",styles={'font-weight': 'bold', 'font-size': '16px'})
+LABELS2 = ["Linear", "Cubic"]
+interp_button_group = RadioButtonGroup(labels=LABELS2, active=0)
+interp_button_group.on_change('active', change_options2)
 
-layout = column(title_text,file_input, row(cont_calc_button, export_button, export_anchors_button), row(p, column( row(radius_input, radius_max_input), checkbox_title, row(checkbox_group, stretching_input))))
+layout = column(title_text,file_input, row(cont_calc_button, export_button, export_anchors_button), row(p, column( row(radius_input, radius_max_input), checkbox_title, row(checkbox_group, stretching_input),interp_button_group, add_maxima_button)))
 
 curdoc().add_root(layout)
 
