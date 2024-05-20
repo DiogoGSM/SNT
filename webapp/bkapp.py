@@ -20,7 +20,7 @@ from bisect import bisect_left
 remove_n_first=0      #removes the first n points in the spectra (only if first points are not useful!) otherwise set to 0
 radius_min=20             #min alpha shape radius
 radius_max=40            #max alpha shape radius (should be at least the size of the largest gap)
-max_vicinity = 1       #required number of values between adjacent maxima
+max_vicinity = 10       #required number of values between adjacent maxima
 stretching = 10      #normalization parameter
 use_RIC = False  #use RIC to avoid large "dips" in the continuum (see documentation)
 interp="linear"     #interpolation type
@@ -51,9 +51,11 @@ p.yaxis.major_label_text_font_size = '11pt'
 
 local_max_data = {'x' : [], 'y': []}
 local_max_source = ColumnDataSource(data=local_max_data)
-p.scatter('x', 'y',source=local_max_source ,fill_color = 'yellow', size=7, \
+p.scatter('x', 'y',source=local_max_source ,fill_color = 'yellow', size=8, \
             selection_color="yellow",
             selection_line_color="firebrick",
+            selection_line_alpha=1.5,
+            selection_line_width=2,
             nonselection_fill_alpha=1,
             nonselection_fill_color="yellow",
             nonselection_line_color="yellow",
@@ -61,7 +63,15 @@ p.scatter('x', 'y',source=local_max_source ,fill_color = 'yellow', size=7, \
 
 anchors_data = {'x' : [], 'y': []}
 anchors_data_source = ColumnDataSource(data=anchors_data)
-p.scatter('x', 'y',source=anchors_data_source,fill_color = 'red', size=7)
+p.scatter('x', 'y',source=anchors_data_source,fill_color = 'red', size=8, \
+            selection_color="red",
+            selection_line_color="black",
+            selection_line_alpha=1.5,
+            selection_line_width=2.5,
+            nonselection_fill_alpha=1,
+            nonselection_fill_color="red",
+            nonselection_line_color="red",
+            nonselection_line_alpha=1.0)                      
 
 cont_data = {'x': [], 'y': []}
 cont_data_source = ColumnDataSource(data=cont_data)
@@ -166,22 +176,31 @@ taptool = p.select(type=TapTool)
 
 def update_anchors():
     selectedIndex = local_max_source.selected.indices
+    print(selectedIndex)
     for i  in range (0 ,len(selectedIndex)):
      #   print("Index:", selectedIndex[i])
      #   print("x:", local_max_source.data['x'][selectedIndex[i]])
      #   print("y:", local_max_source.data['y'][selectedIndex[i]])
        # anchors_data_source.data['x'].append(local_max_source.data['x'][selectedIndex[i]])    
        # anchors_data_source.data['y'].append(local_max_source.data['y'][selectedIndex[i]])         
-        idx = bisect_left(anchors_data_source.data['x'], local_max_source.data['x'][selectedIndex[i]]) #ordered insertion in anchors list (needed for cubic interp)
-        if(anchors_data_source.data['x'][idx]==local_max_source.data['x'][selectedIndex[i]]):     #avoid duplicate insertions
-            continue
-        anchors_data_source.data['x'].insert(idx, local_max_source.data['x'][selectedIndex[i]])
-        anchors_data_source.data['y'].insert(idx, local_max_source.data['y'][selectedIndex[i]])                                                                                      
-    #print("-------------------------------------")   
-   # print(anchors_data_source.data['y'])
-    new_fx=continuum.interpolate(anchors_data_source.data['x'],anchors_data_source.data['y'], interp) #interpolate with new points
-    cont_data_source.data['y']=new_fx(cont_data_source.data['x'])                                     
+        idx = bisect_left(anchors_data_source.data['x'], local_max_source.data['x'][selectedIndex[i]]) #ordered insertion/removal in anchors list (needed for cubic interp)
+        if(idx>=len(anchors_data_source.data['x']) or anchors_data_source.data['x'][idx]!=local_max_source.data['x'][selectedIndex[i]]): #if doesn't exist add it
+            anchors_data_source.data['x'].insert(idx, local_max_source.data['x'][selectedIndex[i]])   
+            anchors_data_source.data['y'].insert(idx, local_max_source.data['y'][selectedIndex[i]])   
+        else:                                                   
+            anchors_data_source.data['x'].pop(idx)  #if it exists remove it
+            anchors_data_source.data['y'].pop(idx)
+    
+    local_max_source.selected.indices = []
+    anchors_data_source.selected.indices=[]
+   # local_max_source.data['x']=local_max_source.data['x']  #dummy code to upload the plots. bokeh? bokeh.
+   # local_max_source.data['y']= local_max_source.data['y']                      
+    anchors_data_source.data['x']=anchors_data_source.data['x']  #dummy code to update the plots. bokeh? bokeh.
+    anchors_data_source.data['y']= anchors_data_source.data['y']
 
+    new_fx=continuum.interpolate(anchors_data_source.data['x'],anchors_data_source.data['y'], interp) #interpolate with new points
+    cont_data_source.data['y']=new_fx(cont_data_source.data['x'])               
+   
 
 add_maxima_button = Button(label="Add Maxima", button_type="default", width=150)
 add_maxima_button.on_event(ButtonClick,update_anchors)
@@ -198,7 +217,7 @@ LABELS2 = ["Linear", "Cubic"]
 interp_button_group = RadioButtonGroup(labels=LABELS2, active=0)
 interp_button_group.on_change('active', change_options2)
 
-layout = column(title_text,file_input, row(cont_calc_button, export_button, export_anchors_button), row(p, column( row(radius_input, radius_max_input), checkbox_title, row(checkbox_group, stretching_input),interp_button_group, add_maxima_button)))
+layout = column(title_text,file_input, row(cont_calc_button, export_button, export_anchors_button), row(p, column( row(radius_input, radius_max_input), checkbox_title, row(checkbox_group, stretching_input),interp_button_title,interp_button_group, add_maxima_button)))
 
 curdoc().add_root(layout)
 
