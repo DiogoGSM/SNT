@@ -4,9 +4,10 @@ from scipy import interpolate
 import scipy.constants as constant
 from scipy.signal import find_peaks
 from collections import deque
+from bisect import bisect_left
 
 
-def b_search(arr, x):
+def b_search(arr, x):  #can remove python has built-in bisect function 
     low = 0
     high = len(arr) - 1
     mid = 0
@@ -68,19 +69,22 @@ class smooth:
     @staticmethod
     def sigma_clip_iqr(distance, anchors_y, anchors_x):      #(asymetric lower bound only) sigma clipping for points that are too close, uses median as cent function and sigma=1.5*iqr 
         l=len(distance)                                                   
-        q75, q25 = np.percentile(distance, [75 ,25])
-        iqr = q75 - q25
-        lower= q25 - 1.5*iqr 
-        for i in range(1,l-1):         #for each pair keeps the one that maximises equidistance to neighbours
-            if(distance[i] < lower): 
-                if(distance[i-1]<distance[i+1]):
-                    print("removed close points:",anchors_x[i])
-                    anchors_x.pop(i)
-                    anchors_y.pop(i)
-                else:
-                    print("removed close points", anchors_x[i])
-                    anchors_x.pop(i+1)
-                    anchors_y.pop(i+1)
+        try:  
+            q75, q25 = np.percentile(distance, [75 ,25])
+            iqr = q75 - q25
+            lower= q25 - 1.5*iqr 
+            for i in range(1,l-1):         #for each pair keeps the one that maximises equidistance to neighbours
+                if(distance[i] < lower): 
+                    if(distance[i-1]<distance[i+1]):
+                        print("removed close points:",anchors_x[i])
+                        anchors_x.pop(i)
+                        anchors_y.pop(i)
+                    else:
+                        print("removed close points", anchors_x[i])
+                        anchors_x.pop(i+1)
+                        anchors_y.pop(i+1)
+        except:               
+            return
         return                      
 
     @staticmethod
@@ -129,7 +133,7 @@ class smooth:
             
 
     @staticmethod
-    def denoise(anchors_y, anchors_idx, spectra, window_size):    #changes each maxima to the average in the window_size, changes list passed as function parameter
+    def denoise(anchors_y, anchors_idx, spectra, window_size, max_ys, max_pos, anchors_x):    #changes each maxima to the average in the window_size, changes list passed as function parameter
         l=len(spectra)
         for i, anchors_idx in enumerate(anchors_idx):
             window_elements=[]
@@ -138,7 +142,10 @@ class smooth:
                     window_elements.append(spectra[anchors_idx-j])
                 if(anchors_idx+j)<l:
                     window_elements.append(spectra[anchors_idx+j])
-            anchors_y[i]=np.median(window_elements)               
+            rem_idx=bisect_left(max_pos, anchors_x[i])
+            new_anchor=np.median(window_elements)      
+            anchors_y[i]=new_anchor    
+            max_ys[rem_idx]=new_anchor 
         return
     
 class a_shape:        #Defines methods for computing the alpha hull

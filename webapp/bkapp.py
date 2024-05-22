@@ -36,7 +36,7 @@ title_text = Div(text="<h1>SNT - Spectra Normalization Tool</h1>")
 
 data = {'x': [], 'y': []}
 source = ColumnDataSource(data=data)
-p = figure(width=800, height=600,
+p = figure(width=1200, height=600,
              tools=tool_list)
 p.line('x', 'y', source=source)
 p.xaxis.axis_label = 'Wavelengths (Å)'
@@ -51,7 +51,7 @@ p.yaxis.major_label_text_font_size = '11pt'
 
 local_max_data = {'x' : [], 'y': []}
 local_max_source = ColumnDataSource(data=local_max_data)
-p.scatter('x', 'y',source=local_max_source ,fill_color = 'yellow', size=8, \
+local_max_fig=p.scatter('x', 'y',source=local_max_source ,fill_color = 'yellow', size=8, \
             selection_color="yellow",
             selection_line_color="firebrick",
             selection_line_alpha=1.5,
@@ -61,9 +61,10 @@ p.scatter('x', 'y',source=local_max_source ,fill_color = 'yellow', size=8, \
             nonselection_line_color="yellow",
             nonselection_line_alpha=1.0)
 
+
 anchors_data = {'x' : [], 'y': []}
 anchors_data_source = ColumnDataSource(data=anchors_data)
-p.scatter('x', 'y',source=anchors_data_source,fill_color = 'red', size=8, \
+anchors_fig=p.scatter('x', 'y',source=anchors_data_source,fill_color = 'red', size=8, \
             selection_color="red",
             selection_line_color="black",
             selection_line_alpha=1.5,
@@ -96,20 +97,44 @@ file_input = FileInput(accept=".csv", width=300, height=50)
 file_input.on_change('value', upload_plot_data)
 
 
+cont_calc_button = Button(label="Display Continuum", button_type="primary", width=150)
+
+#change_text = CustomJS(args=dict(button=cont_calc_button), code="""
+#        button.label = "Calculating...";
+#""")
+
+#flag=0
+
+def change_text1():
+    global cont_calc_button
+    cont_calc_button.label="Calculating..."
+
+def change_text2():
+      global cont_calc_button
+      cont_calc_button.label="Display Continuum"
+
+
 def calc_func():
     wavelengths, spectra, max_pos, max_ys, anchors_x, anchors_y, y_inter, wavelengths_clip, step_x, step_y, ps = \
-            cont_determ (source.data['x'].tolist(), source.data['y'].tolist(), remove_n_first, radius_min, radius_max, max_vicinity, \
+            cont_determ (source.data['x'].tolist(), source.data['y'].tolist(), remove_n_first, radius_min, radius_max, max_vicinity_slider.value, \
                         stretching, use_RIC, interp, use_denoise, usefilter, nu, niter_peaks_remove, denoising_distance)
     local_max_source.data = {'x': max_pos, 'y': max_ys}
     anchors_data_source.data= {'x': anchors_x, 'y': anchors_y}
     cont_data_source.data = {'x': wavelengths, 'y': y_inter}
+    change_text2()
+ 
+   
+def update_and_calc():
+    change_text1()
+    curdoc().add_next_tick_callback(calc_func)
+   
+cont_calc_button.on_click(update_and_calc)   
 
+
+#cont_calc_button.js_on_click(change_text)
 
 def export_anchors():
     pass
-
-cont_calc_button = Button(label="Display Continuum", button_type="primary", width=150)
-cont_calc_button.on_click(calc_func)
 
 export_button = Button(label="Export line", button_type="primary", width=150)
 export_button.js_on_event(
@@ -176,13 +201,8 @@ taptool = p.select(type=TapTool)
 
 def update_anchors():
     selectedIndex = local_max_source.selected.indices
-    print(selectedIndex)
-    for i  in range (0 ,len(selectedIndex)):
-     #   print("Index:", selectedIndex[i])
-     #   print("x:", local_max_source.data['x'][selectedIndex[i]])
-     #   print("y:", local_max_source.data['y'][selectedIndex[i]])
-       # anchors_data_source.data['x'].append(local_max_source.data['x'][selectedIndex[i]])    
-       # anchors_data_source.data['y'].append(local_max_source.data['y'][selectedIndex[i]])         
+   # print(selectedIndex)
+    for i  in range (0 ,len(selectedIndex)):  
         idx = bisect_left(anchors_data_source.data['x'], local_max_source.data['x'][selectedIndex[i]]) #ordered insertion/removal in anchors list (needed for cubic interp)
         if(idx>=len(anchors_data_source.data['x']) or anchors_data_source.data['x'][idx]!=local_max_source.data['x'][selectedIndex[i]]): #if doesn't exist add it
             anchors_data_source.data['x'].insert(idx, local_max_source.data['x'][selectedIndex[i]])   
@@ -191,18 +211,17 @@ def update_anchors():
             anchors_data_source.data['x'].pop(idx)  #if it exists remove it
             anchors_data_source.data['y'].pop(idx)
     
-    local_max_source.selected.indices = []
+    local_max_source.selected.indices = []   #clear selections
     anchors_data_source.selected.indices=[]
-   # local_max_source.data['x']=local_max_source.data['x']  #dummy code to upload the plots. bokeh? bokeh.
-   # local_max_source.data['y']= local_max_source.data['y']                      
-    anchors_data_source.data['x']=anchors_data_source.data['x']  #dummy code to update the plots. bokeh? bokeh.
+      
+    anchors_data_source.data['x']=anchors_data_source.data['x']  #dummy code to update the plots. bokeh? bokeh. 
     anchors_data_source.data['y']= anchors_data_source.data['y']
 
     new_fx=continuum.interpolate(anchors_data_source.data['x'],anchors_data_source.data['y'], interp) #interpolate with new points
     cont_data_source.data['y']=new_fx(cont_data_source.data['x'])               
    
 
-add_maxima_button = Button(label="Add Maxima", button_type="default", width=150)
+add_maxima_button = Button(label="Add/Remove Maxima", button_type="default", width=150)
 add_maxima_button.on_event(ButtonClick,update_anchors)
 
 def change_options2(attr, old, new):
@@ -213,11 +232,23 @@ def change_options2(attr, old, new):
         interp="cubic"    
   
 interp_button_title = Div(text="Interpolation",styles={'font-weight': 'bold', 'font-size': '16px'})
+vicinity_button_title = Div(text="Max Vicinity",styles={'font-weight': 'bold', 'font-size': '16px'})
 LABELS2 = ["Linear", "Cubic"]
 interp_button_group = RadioButtonGroup(labels=LABELS2, active=0)
 interp_button_group.on_change('active', change_options2)
 
-layout = column(title_text,file_input, row(cont_calc_button, export_button, export_anchors_button), row(p, column( row(radius_input, radius_max_input), checkbox_title, row(checkbox_group, stretching_input),interp_button_title,interp_button_group, add_maxima_button)))
+max_vicinity_slider=Slider(start=1, end=100, value=10, step=1)
+
+def update_visible(atr, old, new):
+    local_max_fig.visible=0 in show_a_cb.active
+    anchors_fig.visible= 0 in show_a_cb.active
+
+show_a_cb = CheckboxGroup(labels=["Show maxima"], active=[0])
+show_a_cb.on_change('active', update_visible)
+
+empty_div = Div(text='', width=200, height=10)
+
+layout = column(title_text,file_input, row(cont_calc_button, export_button, export_anchors_button,empty_div ,show_a_cb), row(p, column(vicinity_button_title, max_vicinity_slider ,row(radius_input, radius_max_input), checkbox_title, row(checkbox_group, stretching_input),interp_button_title, interp_button_group, add_maxima_button)))
 
 curdoc().add_root(layout)
 
