@@ -12,7 +12,7 @@ import config
  
 
 def cont_determ (wv, sp, remove_n_first, radius_min, radius_max, max_vicinity, \
-                stretching, use_RIC, interp, use_denoise, usefilter, nu, niter_peaks_remove, denoising_distance): 
+                stretching, use_RIC, interp, use_denoise, usefilter, nu, niter_peaks_remove, denoising_distance, fwhm): 
     #data = read_csv("./spectra/case_2_spec.csv")
  
     # converting column data to list
@@ -33,7 +33,7 @@ def cont_determ (wv, sp, remove_n_first, radius_min, radius_max, max_vicinity, \
     min_lambda = min(wavelengths)
 #FWHM=header['HIERARCH ESO QC CCF FWHM']   #FWHM in Km/s                            
 #FWHM_WL= min_lambda*(FWHM/(constant.c/1000)) #FWHM in A
-    FWHM_WL=0.1 #in case the spectra doesn't include information about FWHM
+    FWHM_WL=fwhm #in case the spectra doesn't include information about FWHM
 
 #plt.plot(wavelengths, spectra)
 #plt.show()
@@ -91,13 +91,6 @@ def cont_determ (wv, sp, remove_n_first, radius_min, radius_max, max_vicinity, \
     smooth.remove_close(anchors_y, anchors_x)
 
 #--------------Interpolation-------------------------------- 
-  #  max_ys=np.array(max_ys)
-  #  anchors_y=np.array(anchors_y)
-  #  print(max_ys)
-  #  print("----")
-  #  print(len(max_ys))
-  #  print(anchors_y)
-  #  print(len(anchors_y))
 
     if(use_denoise):
         smooth.denoise(anchors_y, anchors_idx, spectra_clip, denoising_distance, max_ys, max_pos, anchors_x)

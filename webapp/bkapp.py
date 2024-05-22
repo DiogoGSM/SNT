@@ -29,6 +29,7 @@ usefilter= False #use savgol filter to smooth spectra
 nu=1                    #exponent of the computed penalty (see documentation)                  
 niter_peaks_remove=0 #number of iterations to remove sharpest peaks before interpolation
 denoising_distance=5
+fwhm=0.1
 
 tool_list=["tap","pan","zoom_in","zoom_out","box_zoom","reset"]
 
@@ -82,11 +83,11 @@ def upload_plot_data(attr, old, new):
     anchors_data_source.data= {'x' : [], 'y': []}   #reset sources on new upload
     local_max_source.data= {'x' : [], 'y': []}
     cont_data_source.data = {'x': [], 'y': []}
-    print("in upload callback")
+  #  print("in upload callback")
     decoded = base64.b64decode(new)
     data = io.BytesIO(decoded)
     df = pd.read_csv(data)
-    print("shape=", df.shape)
+  #  print("shape=", df.shape)
     if(df.shape[1]==3):                    #if it includes indexes in the csv drop them
         df.drop(columns=df.columns[0], axis=1, inplace=True)      
     x = df.iloc[:, 0]
@@ -117,7 +118,7 @@ def change_text2():
 def calc_func():
     wavelengths, spectra, max_pos, max_ys, anchors_x, anchors_y, y_inter, wavelengths_clip, step_x, step_y, ps = \
             cont_determ (source.data['x'].tolist(), source.data['y'].tolist(), remove_n_first, radius_min, radius_max, max_vicinity_slider.value, \
-                        stretching, use_RIC, interp, use_denoise, usefilter, nu, niter_peaks_remove, denoising_distance)
+                        stretching, use_RIC, interp, use_denoise, usefilter, nu, niter_peaks_remove, denoising_distance, fwhm)
     local_max_source.data = {'x': max_pos, 'y': max_ys}
     anchors_data_source.data= {'x': anchors_x, 'y': anchors_y}
     cont_data_source.data = {'x': wavelengths, 'y': y_inter}
@@ -158,11 +159,11 @@ def update_radius_max(attr, old, new):
     global radius_max
     radius_max= new
 
-radius_input = NumericInput(low=0.01, title="Radius Min", mode='float',styles={'font-weight': 'bold', 'font-size': '16px'} ,description="α-shape starting radius")
+radius_input = NumericInput(low=0.01, title="Radius Min", mode='float',placeholder='20',styles={'font-weight': 'bold', 'font-size': '16px'} ,description="α-shape starting radius")
 radius_input.on_change("value", update_radius)
 
 
-radius_max_input= NumericInput(low=0.5, title="Radius Max",mode='float',styles={'font-weight': 'bold', 'font-size': '16px'}, description="α-shape maximum radius" )
+radius_max_input= NumericInput(low=0.5, title="Radius Max",mode='float',placeholder='40',styles={'font-weight': 'bold', 'font-size': '16px'}, description="α-shape maximum radius" )
 radius_max_input.on_change("value", update_radius_max)
 
 def change_options(attr, old, new):
@@ -182,7 +183,7 @@ def change_options(attr, old, new):
     else:
         use_RIC=False
 
-LABELS = ["Denoise", "Savitzky-golay filter", "RIC"]
+LABELS = ["Denoise", "Savitzky-Golay filter", "RIC"]
 
 checkbox_group = CheckboxGroup(labels=LABELS, styles={'font-size': '15px'})
 checkbox_group.on_change('active', change_options)
@@ -193,7 +194,7 @@ def update_stretching(attr, old, new):
     global stretching
     stretching=new
 
-stretching_input= NumericInput(low=0, mode='float',title="Stretching",styles={'font-weight': 'bold', 'font-size': '16px'}, description="Vertical axis scaling" )
+stretching_input= NumericInput(low=0, mode='float',title="Stretching",placeholder="10",styles={'font-weight': 'bold', 'font-size': '16px'}, description="Vertical axis scaling" )
 stretching_input.on_change("value", update_stretching)
 
 taptool = p.select(type=TapTool)
@@ -243,12 +244,21 @@ def update_visible(atr, old, new):
     local_max_fig.visible=0 in show_a_cb.active
     anchors_fig.visible= 0 in show_a_cb.active
 
-show_a_cb = CheckboxGroup(labels=["Show maxima"], active=[0])
+def update_fwhm(attr, old, new):
+    global fwhm
+    fwhm=new
+
+show_a_cb = CheckboxGroup(labels=["Show maxima"], active=[0], styles={'font-size': '13px'})
 show_a_cb.on_change('active', update_visible)
 
-empty_div = Div(text='', width=200, height=10)
+show_a_cb.margin=(20, 0, 0, 0)
 
-layout = column(title_text,file_input, row(cont_calc_button, export_button, export_anchors_button,empty_div ,show_a_cb), row(p, column(vicinity_button_title, max_vicinity_slider ,row(radius_input, radius_max_input), checkbox_title, row(checkbox_group, stretching_input),interp_button_title, interp_button_group, add_maxima_button)))
+fwhm_input= NumericInput(low=0, mode='float',title="FWHM",placeholder='0.1',styles={'font-weight': 'bold', 'font-size': '16px'}, description="Full width at half maximum - leave default value if unknown")
+fwhm_input.on_change("value", update_fwhm)
+
+empty_div = Div(text='', width=575, height=1)
+
+layout = column(title_text,file_input, row(cont_calc_button, export_button, export_anchors_button,empty_div ,show_a_cb), row(p, column(vicinity_button_title, max_vicinity_slider ,row(radius_input, radius_max_input), checkbox_title, row(checkbox_group, stretching_input),interp_button_title, interp_button_group,fwhm_input, add_maxima_button)))
 
 curdoc().add_root(layout)
 
