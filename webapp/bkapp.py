@@ -31,6 +31,8 @@ niter_peaks_remove=0 #number of iterations to remove sharpest peaks before inter
 denoising_distance=5
 fwhm=0.1
 
+aux_flag=0
+
 tool_list=["tap","pan","zoom_in","zoom_out","box_zoom","reset"]
 
 title_text = Div(text="<h1>SNT - Spectra Normalization Tool</h1>")
@@ -38,8 +40,8 @@ title_text = Div(text="<h1>SNT - Spectra Normalization Tool</h1>")
 data = {'x': [], 'y': []}
 source = ColumnDataSource(data=data)
 p = figure(width=1200, height=600,
-             tools=tool_list)
-p.line('x', 'y', source=source)
+             tools=tool_list) #y_range=(0, 400) needs to be specified here to be able to change later
+spectra_fig=p.line('x', 'y', source=source)
 p.xaxis.axis_label = 'Wavelengths (Å)'
 p.yaxis.axis_label = 'Flux'
 p.xaxis.axis_label_text_font_size = '13pt'  
@@ -77,12 +79,24 @@ anchors_fig=p.scatter('x', 'y',source=anchors_data_source,fill_color = 'red', si
 
 cont_data = {'x': [], 'y': []}
 cont_data_source = ColumnDataSource(data=cont_data)
-p.line('x', 'y', source= cont_data_source, line_color = 'red')
+cont_fig=p.line('x', 'y', source= cont_data_source, line_color = 'red')
+
+
+p2 = figure(width=1200, height=600,
+             tools=tool_list,  x_range=p.x_range)
+
+norm_data = {'x': [], 'y': []}
+norm_source = ColumnDataSource(data=norm_data)
+norm_fig=p2.line('x', 'y', source=norm_source, line_color= 'black')
+
+p2.visible=False
 
 def upload_plot_data(attr, old, new):
+
     anchors_data_source.data= {'x' : [], 'y': []}   #reset sources on new upload
     local_max_source.data= {'x' : [], 'y': []}
     cont_data_source.data = {'x': [], 'y': []}
+    norm_source.data= {'x': [], 'y': []}
   #  print("in upload callback")
     decoded = base64.b64decode(new)
     data = io.BytesIO(decoded)
@@ -95,10 +109,15 @@ def upload_plot_data(attr, old, new):
     source.data= {'x': x, 'y': y}
 
 file_input = FileInput(accept=".csv", width=300, height=50)
-file_input.on_change('value', upload_plot_data)
+file_input.on_change('value', upload_plot_data)   #reset view on new input
 
+file_input.js_on_change('value',CustomJS(args=dict(p=p), code="""   
+    p.reset.emit()
+"""))
 
 cont_calc_button = Button(label="Display Continuum", button_type="primary", width=150)
+
+
 
 #change_text = CustomJS(args=dict(button=cont_calc_button), code="""
 #        button.label = "Calculating...";
@@ -126,8 +145,15 @@ def calc_func():
  
    
 def update_and_calc():
-    change_text1()
-    curdoc().add_next_tick_callback(calc_func)
+    global aux_flag
+    if aux_flag==1:
+        p2.visible=False
+        p.visible=True
+        norm_source.data = {'x': [], 'y': []}
+        aux_flag=0
+    else:   
+        change_text1()
+        curdoc().add_next_tick_callback(calc_func)
    
 cont_calc_button.on_click(update_and_calc)   
 
@@ -256,9 +282,30 @@ show_a_cb.margin=(20, 0, 0, 0)
 fwhm_input= NumericInput(low=0, mode='float',title="FWHM",placeholder='0.1',styles={'font-weight': 'bold', 'font-size': '16px'}, description="Full width at half maximum - leave default value if unknown")
 fwhm_input.on_change("value", update_fwhm)
 
-empty_div = Div(text='', width=575, height=1)
+empty_div = Div(text='', width=423, height=1)
 
-layout = column(title_text,file_input, row(cont_calc_button, export_button, export_anchors_button,empty_div ,show_a_cb), row(p, column(vicinity_button_title, max_vicinity_slider ,row(radius_input, radius_max_input), checkbox_title, row(checkbox_group, stretching_input),interp_button_title, interp_button_group,fwhm_input, add_maxima_button)))
+def calc_norm ():
+    if not isinstance(cont_data_source.data['y'], np.ndarray):
+       return 
+    if not cont_data_source.data['y'].size== 0:
+        nan_idx=np.argwhere(np.isnan(cont_data_source.data['y']))            #remove NaN values if present
+        cont_y_no_nan = np.delete(cont_data_source.data['y'], nan_idx)
+        spectra_y_no_nan =np.delete(source.data['y'], nan_idx)
+        spectra_x_no_nan= np.delete(source.data['x'], nan_idx)
+        norm_y= np.divide(spectra_y_no_nan ,cont_y_no_nan)
+        norm_source.data = {'x': spectra_x_no_nan, 'y': norm_y}
+        p.visible=False
+        p2.visible=True
+        global aux_flag
+        aux_flag=1
+    else:
+        return    
+   
+
+normalize_button = Button(label="Normalize", button_type="primary", width=150)
+normalize_button.on_click(calc_norm)
+
+layout = column(title_text,file_input, row(cont_calc_button,normalize_button ,export_button, export_anchors_button,empty_div ,show_a_cb), row(p, p2, column(vicinity_button_title, max_vicinity_slider ,row(radius_input, radius_max_input), checkbox_title, row(checkbox_group, stretching_input),interp_button_title, interp_button_group,fwhm_input, add_maxima_button)))
 
 curdoc().add_root(layout)
 
