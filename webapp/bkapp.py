@@ -33,14 +33,30 @@ fwhm=0.1
 
 aux_flag=0
 
-tool_list=["tap","pan","zoom_in","zoom_out","box_zoom","reset"]
+zoom_x_start=0
+zoom_x_end=1
+
+tool_list=["tap","pan","zoom_in","zoom_out","box_zoom"]
 
 title_text = Div(text="<h1>SNT - Spectra Normalization Tool</h1>")
+
+def rangefunc1(data):         #auxiliary functions to correctly manual resize the plots
+     if not source.data['x'] :
+         return 0
+     else:
+        return  source.data['x'][0]
+  
+def rangefunc2(data):
+    if not source.data['x'] :
+        return 1
+    else:
+        return source.data['x'][len(source.data['x'])-1]
 
 data = {'x': [], 'y': []}
 source = ColumnDataSource(data=data)
 p = figure(width=1200, height=600,
-             tools=tool_list) #y_range=(0, 400) needs to be specified here to be able to change later
+             tools=tool_list, x_range=(rangefunc1(data), rangefunc2(data))) 
+
 spectra_fig=p.line('x', 'y', source=source)
 p.xaxis.axis_label = 'Wavelengths (Å)'
 p.yaxis.axis_label = 'Flux'
@@ -107,6 +123,10 @@ def upload_plot_data(attr, old, new):
     x = df.iloc[:, 0]
     y = df.iloc[:, 1]     
     source.data= {'x': x, 'y': y}
+    p.x_range.start = source.data['x'][0]
+    p.x_range.end = source.data['x'][len(source.data['x'])-1]
+
+  
 
 file_input = FileInput(accept=".csv", width=300, height=50)
 file_input.on_change('value', upload_plot_data)   #reset view on new input
@@ -284,6 +304,8 @@ fwhm_input.on_change("value", update_fwhm)
 
 empty_div = Div(text='', width=423, height=1)
 
+empty_div2 = Div(text='', width=2, height=1)
+
 def calc_norm ():
     if not isinstance(cont_data_source.data['y'], np.ndarray):
        return 
@@ -300,12 +322,47 @@ def calc_norm ():
         aux_flag=1
     else:
         return    
-   
+
+def update_xi(attr, old, new):
+    global zoom_x_start
+    zoom_x_start=new
+
+def update_xf(attr, old, new):
+    global zoom_x_end
+    zoom_x_end=new  
+
+def zoom_update():
+    global zoom_x_start
+    global zoom_x_end
+    p.x_range.start = zoom_x_start
+    p.x_range.end = zoom_x_end
+
+zoom_input = NumericInput(title="Xi", mode='float',styles={'font-weight': 'bold', 'font-size': '14px'}, width=50)
+zoom_input.on_change("value", update_xi)
+
+zoom_input2 = NumericInput(title="Xf", mode='float',styles={'font-weight': 'bold', 'font-size': '14px'}, width=50)
+zoom_input2.on_change("value", update_xf)
+
+zoom_button = Button(label="Go to", button_type="default", width=50)
+zoom_button.on_click(zoom_update)
+
+zoom_button.margin=(28, 0, 0, 0)
+
+
+def zoom_reset():
+    p.x_range.start = source.data['x'][0]
+    p.x_range.end = source.data['x'][len(source.data['x'])-1]
+
+reset_button = Button(label="Reset", button_type="default", width=50)
+reset_button.on_click(zoom_reset)
+
+reset_button.margin=(28, 0, 0, 0)
 
 normalize_button = Button(label="Normalize", button_type="primary", width=150)
 normalize_button.on_click(calc_norm)
 
-layout = column(title_text,file_input, row(cont_calc_button,normalize_button ,export_button, export_anchors_button,empty_div ,show_a_cb), row(p, p2, column(vicinity_button_title, max_vicinity_slider ,row(radius_input, radius_max_input), checkbox_title, row(checkbox_group, stretching_input),interp_button_title, interp_button_group,fwhm_input, add_maxima_button)))
+
+layout = column(title_text,row(file_input, zoom_input, zoom_input2, zoom_button,empty_div2, reset_button), row(cont_calc_button,normalize_button ,export_button, export_anchors_button,empty_div ,show_a_cb), row(p, p2, column(vicinity_button_title, max_vicinity_slider ,row(radius_input, radius_max_input), checkbox_title, row(checkbox_group, stretching_input),interp_button_title, interp_button_group,fwhm_input, add_maxima_button)))
 
 curdoc().add_root(layout)
 
