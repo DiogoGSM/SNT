@@ -101,6 +101,15 @@ cont_fig=p.line('x', 'y', source= cont_data_source, line_color = 'red')
 p2 = figure(width=1200, height=600,
              tools=tool_list,  x_range=p.x_range)
 
+p2.xaxis.axis_label = 'Wavelengths (Å)'
+p2.yaxis.axis_label = 'Flux'
+p2.xaxis.axis_label_text_font_size = '13pt'  
+p2.yaxis.axis_label_text_font_size = '13pt'
+p2.xaxis.axis_label_text_font_style = 'normal'
+p2.yaxis.axis_label_text_font_style = 'normal'
+p2.xaxis.major_label_text_font_size = '11pt'  
+p2.yaxis.major_label_text_font_size = '11pt' 
+
 norm_data = {'x': [], 'y': []}
 norm_source = ColumnDataSource(data=norm_data)
 norm_fig=p2.line('x', 'y', source=norm_source, line_color= 'black')
@@ -355,6 +364,13 @@ def zoom_reset():
 
 reset_button = Button(label="Reset", button_type="default", width=50)
 reset_button.on_click(zoom_reset)
+
+
+reset_button.js_on_click(CustomJS(args=dict(p=p), code="""   
+    p.reset.emit()
+"""))
+
+
 
 reset_button.margin=(28, 0, 0, 0)
 
