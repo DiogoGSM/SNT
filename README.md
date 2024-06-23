@@ -8,7 +8,7 @@ SNT - Spectra Normalization Tool
 * Numpy (https://numpy.org/)
 * Scipy (https://scipy.org/)
 * Pandas (https://pandas.pydata.org/)
-* Bokeh (https://bokeh.org) - only for the webapp interface
+* Bokeh ([https://bokeh.org](https://docs.bokeh.org/en/latest/docs/first_steps.html)) - only for the webapp interface
 
 ### How to run
 
