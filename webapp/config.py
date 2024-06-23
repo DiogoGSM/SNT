@@ -15,3 +15,4 @@ usefilter= True #use savgol filter to smooth spectra
 nu=1                    #exponent of the computed penalty (see documentation)                  
 niter_peaks_remove=0 #number of iterations to remove sharpest peaks before interpolation
 denoising_distance=5   #number of points to calculate the average around a maximum if use_denoise is True, useful for noisy spectra
+

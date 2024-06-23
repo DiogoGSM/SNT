@@ -14,7 +14,6 @@ function table_to_csv(source) {
     return lines.join('\n').concat('\n')
 }
 
-
 const filename = 'continuum_data.csv'
 const filetext = table_to_csv(source)
 const blob = new Blob([filetext], { type: 'text/csv;charset=utf-8;' })

@@ -6,7 +6,6 @@ from scipy.signal import find_peaks
 from collections import deque
 from bisect import bisect_left
 
-
 def b_search(arr, x):  #can remove python has built-in bisect function 
     low = 0
     high = len(arr) - 1
