@@ -10,13 +10,19 @@ import sys
 import config
 from pandas import *
  
-data = read_csv("../spectra/case_1_spec.csv")
- 
-# converting column data to list
-wavelengths = data['wave'].tolist()
-spectra = data['flux'].tolist()
+inputfile=sys.argv[1]
 
-#inputfile=sys.argv[1]
+df = read_csv(inputfile)
+ 
+if(df.shape[1]==3):                    #if it includes indexes in the csv drop them
+        df.drop(columns=df.columns[0], axis=1, inplace=True)      
+x = df.iloc[:, 0]
+y = df.iloc[:, 1]  
+
+# converting column data to list
+wavelengths = x.tolist()
+spectra = y.tolist()
+
 
 #with fits.open(inputfile) as hdu:
 
