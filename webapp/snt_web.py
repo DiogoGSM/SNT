@@ -10,7 +10,6 @@ import sys
 import config
 #from pandas import *
  
-
 def cont_determ (wv, sp, remove_n_first, radius_min, radius_max, max_vicinity, \
                 stretching, use_RIC, interp, use_denoise, usefilter, nu, niter_peaks_remove, denoising_distance, fwhm): 
     #data = read_csv("./spectra/case_2_spec.csv")
