@@ -116,8 +116,8 @@ print("Number of selected maxima:", len(anchors_y))
 np.savetxt(fname="anchors.csv",
           X=np.c_[anchors_x, anchors_y], delimiter=",", header="anchorsX, anchorsY")
 
-#np.savetxt(fname=sys.argv[2],
- #         X=np.c_[wavelengths, y_inter], delimiter=",", header="wave, flux")
+np.savetxt(fname="continuum.csv",
+          X=np.c_[wavelengths, y_inter], delimiter=",", header="wave, flux")
 
 #plot
 fig, ax = plt.subplots(2, sharex=True)
