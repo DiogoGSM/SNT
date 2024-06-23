@@ -1,3 +1,3 @@
 #!/bin/bash
 
-bokeh serve --show bkapp.py --websocket-max-message-size=104857600
+bokeh serve --show snt_app.py --websocket-max-message-size=104857600
